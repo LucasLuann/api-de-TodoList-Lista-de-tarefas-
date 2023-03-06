@@ -1,44 +1,63 @@
-import http from 'node:http'
-import { Database } from './database.js'
+// Iniciando o express
+const express = require('express')
+const app = express()
 
-const database = new Database()
+// Banco de dados fake
+let tarefas = []
 
-const server = http.createServer((req, res) => {
-  const { method, url } = req
+// API entende que está lidando com JSON
+app.use(express.json())
 
-  if (method == 'GET' && url == '/tarefa') {
-    const tarefas = database.select('tarefas')
+// Criar as tarefas do todoList
+app.post('/tarefas', (req, res) => {
+    const { codigo, descricao, status } = req.body
+    const tarefa = { codigo, descricao, status }
+    tarefas.push(tarefa)
+
+    // 201 - Criado
+    return res.status(201).json(tarefa)
+} )
+
+// Listar todas as tarefas do todoList
+app.get('/tarefas', (req, res) => {
+    const todasTarefas = tarefas
+    return res.status(200).json(todasTarefas)
+} )
+
+// Listar uma tarefa em específico
+app.get('/tarefas/:tarefa_codigo', (req,res) => {
+    const { tarefa_codigo }  = req.params
+    const tarefa = tarefas.find((tarefa)  => tarefa.codigo === tarefa_codigo)
+
+    return res.status(200).json(tarefa)
+} )
+
+// Deletar tarefa
+app.delete('/tarefas/:tarefa_codigo', (req, res) => {
+    const { tarefa_codigo }  = req.params
+    const tarefaFilter = tarefas.filter((tarefa) => tarefa.codigo !== tarefa_codigo )
+    tarefas = tarefaFilter
+
+    return res.status(204).json("Deletado")
+
+} )
 
 
-    // Early Return
-    return res.end(JSON.stringify(tarefas)) 
-  }
+// Atualizar tarefa
+app.patch('/tarefas/:tarefa_codigo', (req, res)  => {
+    const { descricao, status } = req.body
+    const { tarefa_codigo }  = req.params
+    const tarefa = tarefas.find(tarefa => tarefa.codigo === tarefa_codigo)
+    tarefa.id = tarefa.id
+    tarefa.descricao = descricao ? descricao : tarefa.descricao
+    tarefa.status = status ? status : tarefa.status
 
-  if (method == 'POST' && url == '/tarefa') {
-    const tarefa = {
-      codigo: 1,
-      descricao: 'Estudar',
-      status: true
-    }
+    return res.status(200).json(tarefa)
+} )
 
-    database.insert('tarefas', tarefa)
+// Servidor
+app.listen(3333, () => console.log('Servidor Rodando'))
 
-    return res.end('Inserção de Tarefas')
-  }
 
-  if (method == 'PUT' && url == '/tarefa') {
-    return res.end('Edicao da descricao da tarefa')
-  }
 
-  if (method == 'PATCH' && url == '/tarefa') {
-    return res.end(' Alterar status da tarefa')
-  }
 
-  if (method == 'DELETE' && url == '/tarefa') {
-    return res.end('Excluir uma tarefa')
-  }
-
-  return res.end('Não caiu em nenhum if')
-})
-
-server.listen(3333) // localhost:3333
